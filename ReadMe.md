@@ -8,6 +8,12 @@ The main functionality improvment is encapsulating the LLAMA into a docker conta
 In order to use this model you will need the checkpoint files converted and stored in the `checkpoints` directory. The original conversion script is included from `lit-llama`, full
 details can be found on their repo: https://github.com/Lightning-AI/lit-llama
 
+## Requirements:
+- Docker
+- Docker Compose
+- Python3 (and supporting libraries)
+    - zmq
+
 ## Installation
 
 - Run the `./deploy_litty.sh` script in the main project directory
