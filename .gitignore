@@ -1,0 +1,4 @@
+checkpoints/lit-llama
+checkpoints/llama
+*.log
+*.pyc
