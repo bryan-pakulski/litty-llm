@@ -24,7 +24,7 @@ if __name__ == "__main__":
         logging.error("No parameter provided to client...")
         usage()
 
-    print("Attempting to connect to client on tcp://localhost:5555...")
+    print("Sending command to server on tcp://localhost:5555, please be patient...")
    
     # Socket to talk to server
     context = zmq.Context()
