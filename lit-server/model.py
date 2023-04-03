@@ -1,44 +1,38 @@
+import os
 import sys
 import time
 from pathlib import Path
 from typing import Optional
 
 import lightning as L
+import safetensors.torch
 import torch
 
 import logging
 
 from lit_llama import LLaMA, Tokenizer, as_8_bit_quantized
 
-ROOT_CHECKPOINTS_PATH = "/home/litty-llm/checkpoints/"
+# Helper functions
+import common
 
-## Helper functions
-def get_cuda_device_string():
-    if (torch.cuda.is_available()):
-        print("Using GPU...")
-        return "cuda"
-    else:
-        print("Using CPU...")
-        return "cpu"
+# Store loaded model in memory to re-query when required
 
 
-## Store loaded model in memory to re-query when required
 class LLAMAModel():
 
-    def __init__(self, accelerator: str = "gpu", checkpoint_path: str = None, tokenizer_path: str = None, model_size: str = "7B", precision: str = "full", quantize: bool = True):
-        
+    def __init__(self, accelerator: str = "auto", checkpoint_path: str = None, tokenizer_path: str = None, config: str = "7B", precision: str = "half", quantize: bool = True):
         """Loads a pre-trained LLaMA model and tokenizer into memory.
 
         Args:
             accelerator: The hardware to run on. Possible choices are:
                 ``"cpu"``, ``"cuda"``, ``"mps"``, ``"gpu"``, ``"tpu"``, ``"auto"``.
-            checkpoint_path: The checkpoint (.pth) path to load.
-            tokenizer_path: The tokenizer (.model) path to load.
-            model_size: Model size parameter to load
+            checkpoint_path: The path containing checkpoints files to load [.pt, .safetensors].
+            tokenizer_path: The path containing tokenizer to load. [.model]
+            config: Model configuration to use [see configs folder]
             precision: whether to use "full" or "half" step precision for the checkpoint weights
             quantize: Whether to quantize the model using the `LLM.int8()` method
         """
-            
+
         # Initialise logging
         logging.basicConfig(
             filename="/home/litty-llm/logs/lit-server.log",
@@ -58,9 +52,9 @@ class LLAMAModel():
 
         # Generation parameters
         self.accelerator = accelerator
-        self.checkpoint_path = ROOT_CHECKPOINTS_PATH + checkpoint_path
-        self.tokenizer_path = ROOT_CHECKPOINTS_PATH + tokenizer_path
-        self.model_size = model_size
+        self.checkpoint_path = common.ROOT_CHECKPOINTS_PATH + checkpoint_path
+        self.tokenizer_path = common.ROOT_CHECKPOINTS_PATH + tokenizer_path
+        self.config = config
         self.precicision = precision
         self.quantize = quantize
 
@@ -71,13 +65,27 @@ class LLAMAModel():
     def load_model(self):
         self.fabric = L.Fabric(accelerator=self.accelerator, devices=1)
 
+        # Safetensors support
+        _, extension = os.path.splittext(self.checkpoint_path)
+
         with as_8_bit_quantized(self.fabric.device, enabled=self.quantize):
             logging.info(f"Loading model {self.checkpoint_path}")
             t0 = time.time()
-            self.model = LLaMA.from_name(self.model_size)
-            self.checkpoint = torch.load(self.checkpoint_path)
+            self.model = LLaMA.from_name(config)
+
+            if extension.lower() == ".safetensors":
+                self.checkpoint = safetensors.torch.load_file(
+                    self.checkpoint_path, map_location=common.get_cuda_device_string())
+            else:
+                self.checkpoint = torch.load(self.checkpoint_path)
+
             self.model.load_state_dict(self.checkpoint)
-            logging.debug(f"Time to load model: {time.time() - t0:.02f} seconds.")
+
+            if self.precision != "full":
+                self.model.half()
+
+            logging.debug(
+                f"Time to load model: {time.time() - t0:.02f} seconds.")
 
         self.model.eval()
 
@@ -86,7 +94,7 @@ class LLAMAModel():
 
     def clean(self):
         if torch.cuda.is_available():
-            with torch.cuda.device(get_cuda_device_string()):
+            with torch.cuda.device(common.get_cuda_device_string()):
                 torch.cuda.empty_cache()
                 torch.cuda.ipc_collect()
 
@@ -150,10 +158,11 @@ class LLAMAModel():
         if self.model is None:
             logging.error('Model not loaded..')
             return None
-        
-        encoded_prompt = self.tokenizer.encode(prompt, bos=True, eos=False, device=self.fabric.device)
+
+        encoded_prompt = self.tokenizer.encode(
+            prompt, bos=True, eos=False, device=self.fabric.device)
         encoded_prompt = encoded_prompt[None, :]  # add batch dimension
-    
+
         L.seed_everything(seed)
         t0 = time.perf_counter()
 
@@ -163,7 +172,8 @@ class LLAMAModel():
             y = self.__generate(
                 encoded_prompt,
                 max_new_tokens,
-                self.model.config.block_size,  # type: ignore[union-attr,arg-type]
+                # type: ignore[union-attr,arg-type]
+                self.model.config.block_size,
                 temperature=temperature,
                 top_k=top_k,
             )[0]  # unpack batch dimension
@@ -173,7 +183,9 @@ class LLAMAModel():
         logging.info(f"Generated Responses: {responses}")
 
         t = time.perf_counter() - t0
-        logging.debug(f"\n\nTime for inference: {t:.02f} sec total, {num_samples * max_new_tokens / t:.02f} tokens/sec")
-        logging.debug(f"Memory used: {torch.cuda.max_memory_reserved() / 1e9:.02f} GB")
+        logging.debug(
+            f"\n\nTime for inference: {t:.02f} sec total, {num_samples * max_new_tokens / t:.02f} tokens/sec")
+        logging.debug(
+            f"Memory used: {torch.cuda.max_memory_reserved() / 1e9:.02f} GB")
 
         return responses

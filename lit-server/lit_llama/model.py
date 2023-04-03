@@ -70,27 +70,6 @@ class RMSNorm(nn.Module):
         return self.scale * x_normed
 
 
-@dataclass
-class LLaMAConfig:
-    block_size: int = 4096
-    vocab_size: int = 32000
-    n_layer: int = 32
-    n_head: int = 32
-    n_embd: int = 4096
-
-    @classmethod
-    def from_name(cls, name: str) -> Self:
-        return llama_configs[name]
-
-
-llama_configs = {
-    "7B": LLaMAConfig(n_layer=32, n_head=32, n_embd=4096),
-    "13B": LLaMAConfig(n_layer=40, n_head=40, n_embd=5120),
-    "30B": LLaMAConfig(n_layer=60, n_head=52, n_embd=6656),
-    "65B": LLaMAConfig(n_layer=80, n_head=64, n_embd=8192),
-}
-
-
 class CausalSelfAttention(nn.Module):
     def __init__(self, config: LLaMAConfig, rope_cache: torch.Tensor) -> None:
         super().__init__()
@@ -112,9 +91,12 @@ class CausalSelfAttention(nn.Module):
         q, k, v = self.c_attn(x).split(self.n_embd, dim=2)
 
         head_size = C // self.n_head
-        k = k.view(B, T, self.n_head, head_size).transpose(1, 2)  # (B, nh, T, hs)
-        q = q.view(B, T, self.n_head, head_size).transpose(1, 2)  # (B, nh, T, hs)
-        v = v.view(B, T, self.n_head, head_size).transpose(1, 2)  # (B, nh, T, hs)
+        k = k.view(B, T, self.n_head, head_size).transpose(
+            1, 2)  # (B, nh, T, hs)
+        q = q.view(B, T, self.n_head, head_size).transpose(
+            1, 2)  # (B, nh, T, hs)
+        v = v.view(B, T, self.n_head, head_size).transpose(
+            1, 2)  # (B, nh, T, hs)
 
         q = apply_rope(q, self.rope_cache)
         k = apply_rope(k, self.rope_cache)
@@ -126,9 +108,11 @@ class CausalSelfAttention(nn.Module):
         #  y = att @ v # (B, nh, T, T) x (B, nh, T, hs) -> (B, nh, T, hs)
 
         # efficient attention using Flash Attention CUDA kernels
-        y = F.scaled_dot_product_attention(q, k, v, attn_mask=None, dropout_p=0.0, is_causal=True)
+        y = F.scaled_dot_product_attention(
+            q, k, v, attn_mask=None, dropout_p=0.0, is_causal=True)
 
-        y = y.transpose(1, 2).contiguous().view(B, T, C)  # re-assemble all head outputs side by side
+        # re-assemble all head outputs side by side
+        y = y.transpose(1, 2).contiguous().view(B, T, C)
 
         # output projection
         y = self.c_proj(y)
@@ -185,16 +169,19 @@ class LLaMA(nn.Module):
         self.transformer = nn.ModuleDict(
             dict(
                 wte=nn.Embedding(config.vocab_size, config.n_embd),
-                h=nn.ModuleList([Block(config, rope_cache) for _ in range(config.n_layer)]),
+                h=nn.ModuleList([Block(config, rope_cache)
+                                for _ in range(config.n_layer)]),
                 ln_f=RMSNorm(config.n_embd),
             )
         )
 
     def _init_weights(self, module: nn.Module) -> None:
         if isinstance(module, nn.Linear):
-            torch.nn.init.normal_(module.weight, mean=0.0, std=0.02 / math.sqrt(2 * self.config.n_layer))
+            torch.nn.init.normal_(module.weight, mean=0.0,
+                                  std=0.02 / math.sqrt(2 * self.config.n_layer))
         elif isinstance(module, nn.Embedding):
-            torch.nn.init.normal_(module.weight, mean=0.0, std=0.02 / math.sqrt(2 * self.config.n_layer))
+            torch.nn.init.normal_(module.weight, mean=0.0,
+                                  std=0.02 / math.sqrt(2 * self.config.n_layer))
 
     def forward(self, idx: torch.Tensor) -> torch.Tensor:
         _, t = idx.size()
@@ -203,7 +190,8 @@ class LLaMA(nn.Module):
         ), f"Cannot forward sequence of length {t}, block size is only {self.config.block_size}"
 
         # forward the LLaMA model itself
-        x = self.transformer.wte(idx)  # token embeddings of shape (b, t, n_embd)
+        # token embeddings of shape (b, t, n_embd)
+        x = self.transformer.wte(idx)
 
         for block in self.transformer.h:
             x = block(x)
