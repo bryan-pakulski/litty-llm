@@ -203,5 +203,5 @@ class LLaMA(nn.Module):
         return logits
     
     @classmethod
-    def from_config(config_path: str) -> Self:
-        return common.LLaMAConfig(config_path)
+    def from_config(cls, config_path: str) -> Self:
+        return cls(common.LLaMAConfig(config_path))

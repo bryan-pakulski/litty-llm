@@ -20,7 +20,7 @@ import common
 
 class LLAMAModel():
 
-    def __init__(self, accelerator: str = "auto", checkpoint_path: str = None, tokenizer_path: str = None, config: str = "7B", precision: str = "half", quantize: bool = True):
+    def __init__(self, accelerator: str = "auto", checkpoint_path: str = None, tokenizer_path: str = None, config: str = "7B", precision: str = "full", quantize: bool = True):
         """Loads a pre-trained LLaMA model and tokenizer into memory.
 
         Args:
@@ -55,7 +55,7 @@ class LLAMAModel():
         self.checkpoint_path = common.ROOT_CHECKPOINTS_PATH + checkpoint_path
         self.tokenizer_path = common.ROOT_CHECKPOINTS_PATH + tokenizer_path
         self.config = config
-        self.precicision = precision
+        self.precision = precision
         self.quantize = quantize
 
         if not self.checkpoint_path or self.tokenizer_path:
@@ -64,16 +64,20 @@ class LLAMAModel():
 
     def load_model(self):
         self.fabric = L.Fabric(accelerator=self.accelerator, devices=1)
+        
+        # TODO: 4bit
 
-        # Safetensors support
-        _, extension = os.path.splitext(self.checkpoint_path)
+        # TODO: safe tensors
+        safe_tensors = []
 
         with as_8_bit_quantized(self.fabric.device, enabled=self.quantize):
-            logging.info(f"Loading model {self.checkpoint_path}")
+            logging.info(f"Loading model/s {self.checkpoint_path}")
             t0 = time.time()
             self.model = LLaMA.from_config(self.config)
 
-            if extension.lower() == ".safetensors":
+            if len(safe_tensors) > 0:
+                for tensor in safe_tensors:
+                    pass
                 self.checkpoint = safetensors.torch.load_file(
                     self.checkpoint_path, map_location=common.get_cuda_device_string())
             else:

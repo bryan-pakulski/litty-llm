@@ -1,5 +1,6 @@
 import torch
 import json
+import os
 
 from dataclasses import dataclass
 
@@ -15,6 +16,13 @@ def get_cuda_device_string():
     else:
         print("Using CPU...")
         return "cpu"
+    
+def get_safetensors_files(directory):
+    safetensors_files = []
+    for filename in os.listdir(directory):
+        if filename.endswith(".safetensors"):
+            safetensors_files.append(os.path.join(directory, filename))
+    return safetensors_files
 
 
 @dataclass

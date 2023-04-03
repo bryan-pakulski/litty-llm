@@ -1,4 +1,6 @@
 checkpoints/models/lit-llama
 checkpoints/models/llama-7b
+*.bin
+
 *.log
 *.pyc
