@@ -11,6 +11,7 @@ import torch.nn as nn
 from torch.nn import functional as F
 from typing_extensions import Self
 
+import common
 
 def build_rope_cache(seq_len: int, n_elem: int, dtype: torch.dtype, base: int = 10000) -> torch.Tensor:
     """Enhanced Transformer with Rotary Position Embedding.
@@ -71,7 +72,7 @@ class RMSNorm(nn.Module):
 
 
 class CausalSelfAttention(nn.Module):
-    def __init__(self, config: LLaMAConfig, rope_cache: torch.Tensor) -> None:
+    def __init__(self, config: common.LLaMAConfig, rope_cache: torch.Tensor) -> None:
         super().__init__()
         assert config.n_embd % config.n_head == 0
 
@@ -121,7 +122,7 @@ class CausalSelfAttention(nn.Module):
 
 
 class MLP(nn.Module):
-    def __init__(self, config: LLaMAConfig) -> None:
+    def __init__(self, config: common.LLaMAConfig) -> None:
         super().__init__()
         hidden_dim = 4 * config.n_embd
         n_hidden = int(2 * hidden_dim / 3)
@@ -140,7 +141,7 @@ class MLP(nn.Module):
 
 
 class Block(nn.Module):
-    def __init__(self, config: LLaMAConfig, rope_cache: torch.Tensor) -> None:
+    def __init__(self, config: common.LLaMAConfig, rope_cache: torch.Tensor) -> None:
         super().__init__()
         self.rms_1 = RMSNorm(config.n_embd)
         self.attn = CausalSelfAttention(config, rope_cache)
@@ -154,7 +155,7 @@ class Block(nn.Module):
 
 
 class LLaMA(nn.Module):
-    def __init__(self, config: LLaMAConfig) -> None:
+    def __init__(self, config: common.LLaMAConfig) -> None:
         super().__init__()
         assert config.vocab_size is not None
         assert config.block_size is not None
@@ -200,7 +201,7 @@ class LLaMA(nn.Module):
         logits = self.lm_head(x)  # (b, t, vocab_size)
 
         return logits
-
+    
     @classmethod
-    def from_name(cls, name: str) -> Self:
-        return cls(LLaMAConfig.from_name(name))
+    def from_config(config_path: str) -> Self:
+        return common.LLaMAConfig(config_path)

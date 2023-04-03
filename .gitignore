@@ -1,4 +1,4 @@
-checkpoints/lit-llama
-checkpoints/llama
+checkpoints/models/lit-llama
+checkpoints/models/llama-7b
 *.log
 *.pyc

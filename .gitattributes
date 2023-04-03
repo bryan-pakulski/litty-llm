@@ -1,0 +1,6 @@
+# Declare files that will always have LF line endings on checkout.
+*.json       eol=lf
+*.py         eol=lf
+*.sh         eol=lf
+*.yml        eol=lf
+*.env_docker eol=lf

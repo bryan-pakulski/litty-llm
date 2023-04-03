@@ -66,12 +66,12 @@ class LLAMAModel():
         self.fabric = L.Fabric(accelerator=self.accelerator, devices=1)
 
         # Safetensors support
-        _, extension = os.path.splittext(self.checkpoint_path)
+        _, extension = os.path.splitext(self.checkpoint_path)
 
         with as_8_bit_quantized(self.fabric.device, enabled=self.quantize):
             logging.info(f"Loading model {self.checkpoint_path}")
             t0 = time.time()
-            self.model = LLaMA.from_name(config)
+            self.model = LLaMA.from_config(self.config)
 
             if extension.lower() == ".safetensors":
                 self.checkpoint = safetensors.torch.load_file(
@@ -81,6 +81,7 @@ class LLAMAModel():
 
             self.model.load_state_dict(self.checkpoint)
 
+            # TODO see if this works
             if self.precision != "full":
                 self.model.half()
 

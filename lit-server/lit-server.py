@@ -51,7 +51,7 @@ class SDModelServer():
                 "help": "Loads a llama model into memory",
                 "arguments": {
                     "accelerator": {
-                        "help": "Hardware accelerator to use i.e cpu, cuda, mps, gpu, tpu, auto",
+                        "help": "Hardware accelerator to use i.e [cpu, cuda, mps, gpu, tpu, auto]",
                         "required": False,
                         "type": str
                     },
@@ -65,9 +65,9 @@ class SDModelServer():
                         "required": True,
                         "type": str
                     },
-                    "model_size": {
-                        "help": "Model size, [7B, 13B, 30B, 65B] defaults to 7B",
-                        "required": False,
+                    "config": {
+                        "help": "json config file path",
+                        "required": True,
                         "type": str
                     },
                     "precision": {
