@@ -13,6 +13,7 @@ from typing_extensions import Self
 
 import common
 
+
 def build_rope_cache(seq_len: int, n_elem: int, dtype: torch.dtype, base: int = 10000) -> torch.Tensor:
     """Enhanced Transformer with Rotary Position Embedding.
 
@@ -159,7 +160,10 @@ class LLaMA(nn.Module):
         super().__init__()
         assert config.vocab_size is not None
         assert config.block_size is not None
+
         self.config = config
+        self.checkpoint_paths = config.checkpoint_paths
+        self.tokenizer_path = config.tokenizer_path
 
         self.lm_head = nn.Linear(config.n_embd, config.vocab_size, bias=False)
 
@@ -201,7 +205,7 @@ class LLaMA(nn.Module):
         logits = self.lm_head(x)  # (b, t, vocab_size)
 
         return logits
-    
+
     @classmethod
     def from_config(cls, config_path: str) -> Self:
         return cls(common.LLaMAConfig(config_path))

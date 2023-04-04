@@ -13,6 +13,7 @@ context = zmq.Context()
 socket = context.socket(zmq.REP)
 socket.bind("tcp://*:5555")
 
+
 class Command():
 
     def __init__(self, command):
@@ -32,7 +33,8 @@ class Command():
                 arg, val = pair.split("=")
                 self.arguments[arg] = val
 
-class SDModelServer():
+
+class LitModelServer():
 
     def __init__(self):
         self.running = True
@@ -53,16 +55,6 @@ class SDModelServer():
                     "accelerator": {
                         "help": "Hardware accelerator to use i.e [cpu, cuda, mps, gpu, tpu, auto]",
                         "required": False,
-                        "type": str
-                    },
-                    "checkpoint_path": {
-                        "help": "Filepath of the model",
-                        "required": True,
-                        "type": str
-                    },
-                    "tokenizer_path": {
-                        "help": "Tokenizer path to load",
-                        "required": True,
                         "type": str
                     },
                     "config": {
@@ -91,7 +83,7 @@ class SDModelServer():
                         "required": True,
                         "type": str
                     },
-                    "num_samples" : {
+                    "num_samples": {
                         "help": "Number of responses to generate for the prompt, default 1",
                         "required": False,
                         "type": int
@@ -125,7 +117,7 @@ class SDModelServer():
 
         # Initialise logging
         logging.basicConfig(
-            filename="/home/litty-llm/logs/lit-server.log",
+            filename="/logs/lit-server.log",
             level=logging.INFO,
             format="[SERVER] %(asctime)s - %(levelname)s - %(message)s"
         )
@@ -165,6 +157,7 @@ class SDModelServer():
                 return False
 
             # Set type
+            # TODO: boolean typesetting may cause issues in casting
             if arg_name in command_args:
                 cmd.arguments[arg_name] = arg_details["type"](
                     cmd.arguments[arg_name])
@@ -190,18 +183,19 @@ class SDModelServer():
         return dump
 
     def __load_model(self, cmd):
-        logging.info(f"Loading model: {cmd.arguments['checkpoint_path']}")
+        logging.info(
+            f"Loading model from config: checkpoints/configs/{cmd.arguments['config']}.json")
 
         # Free the old model if it exists and recover resources
         if (self.model != None):
             logging.info(
-                f"Freeing old model & recovering resource: {self.model.checkpoint_path}")
+                f"Freeing old model & recovering resources")
             self.model.clean()
 
         self.model = LLAMAModel(**cmd.arguments)
         self.model.load_model()
 
-        return f"Model loaded... {cmd.arguments['checkpoint_path']}"
+        return f"Model loaded... {self.model.checkpoint_paths}"
 
     def __generate(self, cmd):
         result = self.model.generate(**cmd.arguments)
@@ -235,8 +229,8 @@ class SDModelServer():
 
 
 def main():
-    sd_server = SDModelServer()
-    sd_server.main()
+    lit_server = LitModelServer()
+    lit_server.main()
 
 
 if __name__ == "__main__":

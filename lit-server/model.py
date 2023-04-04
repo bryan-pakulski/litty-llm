@@ -10,6 +10,7 @@ import torch
 
 import logging
 
+from torch.utils.data import DataLoader
 from lit_llama import LLaMA, Tokenizer, as_8_bit_quantized
 
 # Helper functions
@@ -20,14 +21,12 @@ import common
 
 class LLAMAModel():
 
-    def __init__(self, accelerator: str = "auto", checkpoint_path: str = None, tokenizer_path: str = None, config: str = "7B", precision: str = "full", quantize: bool = True):
+    def __init__(self, accelerator: str = "auto", config: str = "7B", precision: str = "full", quantize: bool = False):
         """Loads a pre-trained LLaMA model and tokenizer into memory.
 
         Args:
             accelerator: The hardware to run on. Possible choices are:
                 ``"cpu"``, ``"cuda"``, ``"mps"``, ``"gpu"``, ``"tpu"``, ``"auto"``.
-            checkpoint_path: The path containing checkpoints files to load [.pt, .safetensors].
-            tokenizer_path: The path containing tokenizer to load. [.model]
             config: Model configuration to use [see configs folder]
             precision: whether to use "full" or "half" step precision for the checkpoint weights
             quantize: Whether to quantize the model using the `LLM.int8()` method
@@ -35,7 +34,7 @@ class LLAMAModel():
 
         # Initialise logging
         logging.basicConfig(
-            filename="/home/litty-llm/logs/lit-server.log",
+            filename="/logs/lit-server.log",
             level=logging.INFO,
             format="[SERVER] %(asctime)s - %(levelname)s - %(message)s"
         )
@@ -52,38 +51,34 @@ class LLAMAModel():
 
         # Generation parameters
         self.accelerator = accelerator
-        self.checkpoint_path = common.ROOT_CHECKPOINTS_PATH + checkpoint_path
-        self.tokenizer_path = common.ROOT_CHECKPOINTS_PATH + tokenizer_path
         self.config = config
         self.precision = precision
         self.quantize = quantize
 
-        if not self.checkpoint_path or self.tokenizer_path:
-            logging.error('Failed to create model, invalid paths provided')
-            return None
-
     def load_model(self):
         self.fabric = L.Fabric(accelerator=self.accelerator, devices=1)
-        
+
         # TODO: 4bit
 
         # TODO: safe tensors
         safe_tensors = []
 
         with as_8_bit_quantized(self.fabric.device, enabled=self.quantize):
-            logging.info(f"Loading model/s {self.checkpoint_path}")
             t0 = time.time()
             self.model = LLaMA.from_config(self.config)
 
-            if len(safe_tensors) > 0:
-                for tensor in safe_tensors:
-                    pass
-                self.checkpoint = safetensors.torch.load_file(
-                    self.checkpoint_path, map_location=common.get_cuda_device_string())
-            else:
-                self.checkpoint = torch.load(self.checkpoint_path)
+            # Create a DataLoader to iterate over all our datasets
+            dataset = torch.utils.data.ConcatDataset(
+                self.model.checkpoint_paths)
+            data_loader = DataLoader(dataset, batch_size=1, shuffle=False)
 
-            self.model.load_state_dict(self.checkpoint)
+            # Load model fragment
+            # TODO: safetensors
+            for data in data_loader:
+                print(data)
+
+                torch.load(data)
+                self.model.load_state_dict(data)
 
             # TODO see if this works
             if self.precision != "full":
@@ -95,7 +90,7 @@ class LLAMAModel():
         self.model.eval()
 
         self.model = self.fabric.setup_module(self.model)
-        self.tokenizer = Tokenizer(self.tokenizer_path)
+        self.tokenizer = Tokenizer(self.model.tokenizer_path)
 
     def clean(self):
         if torch.cuda.is_available():

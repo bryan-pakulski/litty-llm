@@ -10,7 +10,8 @@ services:
       dockerfile: Dockerfile
     env_file: .env_docker
     volumes:
-      - ../:/home/litty-llm
+      - ../logs:/logs
+      - ../checkpoints:/checkpoints
       - conda_env:/opt/conda
       - root_profile:/root
     ports:

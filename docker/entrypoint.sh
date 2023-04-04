@@ -39,7 +39,8 @@ fi
 conda activate $ENV_NAME
 conda info | grep active
 
-cd /home/litty-llm
-pip install -e .
+# Cleanup on start
+cd /lit-server
+find . -name '*.pyc' -delete
 
-python lit-server/lit-server.py &
+python /lit-server/lit-server.py &

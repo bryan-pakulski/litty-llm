@@ -1,12 +1,16 @@
+#!/bin/python3
+
 import sys
 import zmq
 import logging
+
 
 def usage():
     print("Error: No parameter provided")
     print("Format of message should be \"<command_name>:<arg1>=<val1>:<arg2>=<val2>...\"")
     print("Example usage: lit-client help")
     sys.exit()
+
 
 if __name__ == "__main__":
     # Initialise logging
@@ -25,7 +29,7 @@ if __name__ == "__main__":
         usage()
 
     print("Sending command to server on tcp://localhost:5555, please be patient...")
-   
+
     # Socket to talk to server
     context = zmq.Context()
     socket = context.socket(zmq.REQ)

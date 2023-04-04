@@ -17,8 +17,10 @@ RUN wget -O ~/miniconda.sh -q --show-progress --progress=bar:force https://repo.
     rm ~/miniconda.sh
 ENV PATH=$CONDA_DIR/bin:$PATH
 
-COPY ./entrypoint.sh /home/
-COPY ./environment.yaml /home/
+RUN mkdir -p /lit-server
+COPY lit-server /lit-server
+COPY ./docker/entrypoint.sh /home/
+COPY ./docker/environment.yaml /home/
 
 RUN ["chmod", "+x", "/home/entrypoint.sh"]
 CMD sleep infinity
