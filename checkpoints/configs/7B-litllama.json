@@ -3,8 +3,7 @@
   "n_head": 32,
   "n_embd": 4096,
   "checkpoint_paths": [
-    "7B/model-00001-of-00002.safetensors",
-    "7B/model-00002-of-00002.safetensors"
+    "7B/state_dict.pth"
   ],
   "tokenizer_path": "7B/tokenizer.model"
 }

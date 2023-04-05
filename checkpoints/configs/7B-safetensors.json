@@ -1,0 +1,10 @@
+{
+    "n_layer": 32,
+    "n_head": 32,
+    "n_embd": 4096,
+    "checkpoint_paths": [
+        "7BSafeTensors/model-00001-of-00002.safetensors",
+        "7BSafeTensors/model-00002-of-00002.safetensors"
+    ],
+    "tokenizer_path": "7BSafeTensors/tokenizer.model"
+}

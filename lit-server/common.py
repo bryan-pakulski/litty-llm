@@ -19,14 +19,6 @@ def get_cuda_device_string():
         return "cpu"
 
 
-def get_safetensors_files(directory):
-    safetensors_files = []
-    for filename in os.listdir(directory):
-        if filename.endswith(".safetensors"):
-            safetensors_files.append(os.path.join(directory, filename))
-    return safetensors_files
-
-
 @dataclass
 class LLaMAConfig:
 

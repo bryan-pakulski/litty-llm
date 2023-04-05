@@ -62,15 +62,10 @@ class LitModelServer():
                         "required": True,
                         "type": str
                     },
-                    "precision": {
-                        "help": "Precision, lower requires less VRAM, [full, half]",
+                    "quantize": {
+                        "help": "Whether to quantize the model & save VRAM at the cost of accuracy: [Full, 8bit, 4bit, 3bit]",
                         "required": False,
                         "type": str
-                    },
-                    "quantize": {
-                        "help": "Quantize model in memory (8 bit precision), lower VRAM requirements",
-                        "required": False,
-                        "type": bool
                     }
                 },
                 "function": self.__load_model
@@ -195,7 +190,7 @@ class LitModelServer():
         self.model = LLAMAModel(**cmd.arguments)
         self.model.load_model()
 
-        return f"Model loaded... {self.model.checkpoint_paths}"
+        return f"Model loaded..."
 
     def __generate(self, cmd):
         result = self.model.generate(**cmd.arguments)

@@ -7,10 +7,10 @@ from typing import Optional
 import lightning as L
 import safetensors.torch
 import torch
+from torch.utils.data import DataLoader, TensorDataset
 
 import logging
 
-from torch.utils.data import DataLoader
 from lit_llama import LLaMA, Tokenizer, as_8_bit_quantized
 
 # Helper functions
@@ -21,21 +21,20 @@ import common
 
 class LLAMAModel():
 
-    def __init__(self, accelerator: str = "auto", config: str = "7B", precision: str = "full", quantize: bool = False):
+    def __init__(self, accelerator: str = "auto", config: str = "7B", quantize: str = "4bit"):
         """Loads a pre-trained LLaMA model and tokenizer into memory.
 
         Args:
             accelerator: The hardware to run on. Possible choices are:
                 ``"cpu"``, ``"cuda"``, ``"mps"``, ``"gpu"``, ``"tpu"``, ``"auto"``.
             config: Model configuration to use [see configs folder]
-            precision: whether to use "full" or "half" step precision for the checkpoint weights
-            quantize: Whether to quantize the model using the `LLM.int8()` method
+            quantize: Whether to quantize the model using Full, 8bit, 4bit or 3bit methods
         """
 
         # Initialise logging
         logging.basicConfig(
             filename="/logs/lit-server.log",
-            level=logging.INFO,
+            level=logging.DEBUG,
             format="[SERVER] %(asctime)s - %(levelname)s - %(message)s"
         )
 
@@ -49,48 +48,64 @@ class LLAMAModel():
         self.tokenizer = None
         self.fabric = None
 
+        # Quantization functions
+        self.qFunctions = {
+            "Full": self.FullPrecision,
+            "8bit": self.EightbitPrecision,
+            "4bit": self.FourbitPrecision,
+            "3bit": self.ThreebitPrecision
+        }
+
         # Generation parameters
         self.accelerator = accelerator
         self.config = config
-        self.precision = precision
         self.quantize = quantize
 
-    def load_model(self):
-        self.fabric = L.Fabric(accelerator=self.accelerator, devices=1)
+    def FullPrecision(self):
+        for checkpoint_path in self.model.checkpoint_paths:
+            logging.debug(f"Loading checkpoint from: {common.MODEL_PATH + checkpoint_path}")
 
-        # TODO: 4bit
+            if checkpoint_path.endswith(".safetensors"):
+                self.checkpoint = safetensors.torch.load_file(common.MODEL_PATH + checkpoint_path)
+            else:
+                self.checkpoint = torch.load(common.MODEL_PATH + checkpoint_path)
 
-        # TODO: safe tensors
-        safe_tensors = []
+            self.model.load_state_dict(self.checkpoint)
 
-        with as_8_bit_quantized(self.fabric.device, enabled=self.quantize):
-            t0 = time.time()
-            self.model = LLaMA.from_config(self.config)
-
-            # Create a DataLoader to iterate over all our datasets
-            dataset = torch.utils.data.ConcatDataset(
-                self.model.checkpoint_paths)
-            data_loader = DataLoader(dataset, batch_size=1, shuffle=False)
-
+    def EightbitPrecision(self):
+        with as_8_bit_quantized(self.fabric.device):
             # Load model fragment
             # TODO: safetensors
-            for data in data_loader:
-                print(data)
+            for checkpoint_path in self.model.checkpoint_paths:
+                logging.debug(f"Loading checkpoint from: {common.MODEL_PATH + checkpoint_path}")
 
-                torch.load(data)
-                self.model.load_state_dict(data)
+                if checkpoint_path.endswith(".safetensors"):
+                    self.checkpoint = safetensors.torch.load_file(common.MODEL_PATH + checkpoint_path)
+                else:
+                    self.checkpoint = torch.load(common.MODEL_PATH + checkpoint_path)
 
-            # TODO see if this works
-            if self.precision != "full":
-                self.model.half()
+                self.model.load_state_dict(self.checkpoint)
 
-            logging.debug(
-                f"Time to load model: {time.time() - t0:.02f} seconds.")
+    # TODO: 4bit
+    def FourbitPrecision(self):
+        pass
+    
+    # TODO: 3bit
+    def ThreebitPrecision(self):
+        pass
+
+    def load_model(self):
+        t0 = time.time()
+        self.fabric = L.Fabric(accelerator=self.accelerator, devices=1)
+        self.model = LLaMA.from_config(self.config)
+        
+        # Call quantization function
+        self.qFunctions[self.quantize]()
 
         self.model.eval()
-
         self.model = self.fabric.setup_module(self.model)
-        self.tokenizer = Tokenizer(self.model.tokenizer_path)
+        self.tokenizer = Tokenizer(common.MODEL_PATH + self.model.tokenizer_path)
+        logging.debug(f"Time to load model: {time.time() - t0:.02f} seconds.")
 
     def clean(self):
         if torch.cuda.is_available():
