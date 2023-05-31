@@ -246,18 +246,18 @@ class ModelServer(MQServer):
         return dump
 
     def __load_model(self, cmd):
-        logging.info(f"Loading model: {cmd.arguments['checkpoint_path']}")
+        logging.info(f"Loading model: {cmd.arguments['model_path']}")
 
         # Free the old model if it exists and recover resources
         if (self.model != None):
             logging.info(
-                f"Freeing old model & recovering resource: {self.model.checkpoint_path}")
+                f"Freeing old model & recovering resource: {self.model.model_path}")
             self.model.clean()
 
         self.model = LLAMAModel(**cmd.arguments)
         self.model.load_model()
 
-        return f"Model loaded... {cmd.arguments['checkpoint_path']}"
+        return f"Model loaded... {cmd.arguments['model_path']}"
 
     def __generate(self, cmd):
         result = self.model.generate(**cmd.arguments)

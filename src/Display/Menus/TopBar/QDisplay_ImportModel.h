@@ -83,7 +83,7 @@ public:
 
   QDisplay_ImportModel(GLFWwindow *w) : QDisplay_Base(w) {
     fileDialog.SetTitle("Import Models");
-    fileDialog.SetTypeFilters({".ckpt", ".safetensors"});
+    fileDialog.SetTypeFilters({".bin"});
 
     *m_saving = false;
   }

@@ -5,8 +5,8 @@
 ### ImGUI Settings ###
 ######################
 HIGH_DPI_SCALE_FACTOR: 1.0
-WINDOW_WIDTH: 1664
-WINDOW_HEIGHT: 936
+WINDOW_WIDTH: 840
+WINDOW_HEIGHT: 940
 
 ############################
 ### Docker Configuration ###
