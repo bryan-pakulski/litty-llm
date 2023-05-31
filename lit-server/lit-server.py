@@ -8,137 +8,38 @@ import zmq
 import json
 import logging
 import traceback
+import threading
 
 context = zmq.Context()
 socket = context.socket(zmq.REP)
+heartbeatSocket = context.socket(zmq.REP)
 socket.bind("tcp://*:5555")
+heartbeatSocket.bind("tcp://*:5556")
 
-class Command():
+# Initialise logging
+logging.basicConfig(
+    filename="/logs/lit-server.log",
+    level=logging.INFO,
+    format="%(asctime)s - [%(levelname)s][dkr]: %(message)s",
+    datefmt='%a %b %d %H:%M:%S %Y'
+)
 
-    def __init__(self, command):
-        self.command = None
-        self.arguments = {}
-        self.parse(command)
+logging.addLevelName(logging.INFO, "info")
+logging.addLevelName(logging.WARNING, "warn")
+logging.addLevelName(logging.ERROR, "err")
+logging.addLevelName(logging.DEBUG, "dbg")
 
-    def parse(self, command):
-        # Split the message into the command and arguments
-        command_and_args = command.split(":")
-        self.command = command_and_args[0]
 
-        print(command_and_args)
-        if (len(command_and_args) > 1):
-            for pair in command_and_args[1:]:
-                print(pair)
-                arg, val = pair.split("=")
-                self.arguments[arg] = val
-
-class SDModelServer():
-
+class MQServer():
     def __init__(self):
         self.running = True
-        self.commandList = {
-            "quit": {
-                "help": "Shuts down Model Server",
-                "arguments": None,
-                "function": self.__quit
-            },
-            "help": {
-                "help": "Prints this message",
-                "arguments": None,
-                "function": self.__help
-            },
-            "loadModel": {
-                "help": "Loads a llama model into memory",
-                "arguments": {
-                    "accelerator": {
-                        "help": "Hardware accelerator to use i.e cpu, cuda, mps, gpu, tpu, auto",
-                        "required": False,
-                        "type": str
-                    },
-                    "checkpoint_path": {
-                        "help": "Filepath of the model",
-                        "required": True,
-                        "type": str
-                    },
-                    "tokenizer_path": {
-                        "help": "Tokenizer path to load",
-                        "required": True,
-                        "type": str
-                    },
-                    "model_size": {
-                        "help": "Model size, [7B, 13B, 30B, 65B] defaults to 7B",
-                        "required": False,
-                        "type": str
-                    },
-                    "precision": {
-                        "help": "Precision, lower requires less VRAM, [full, half]",
-                        "required": False,
-                        "type": str
-                    },
-                    "quantize": {
-                        "help": "Quantize model in memory (8 bit precision), lower VRAM requirements",
-                        "required": False,
-                        "type": bool
-                    }
-                },
-                "function": self.__load_model
-            },
-            "generate": {
-                "help": "Generate a response",
-                "arguments": {
-                    "prompt": {
-                        "help": "Prompt",
-                        "required": True,
-                        "type": str
-                    },
-                    "num_samples" : {
-                        "help": "Number of responses to generate for the prompt, default 1",
-                        "required": False,
-                        "type": int
-                    },
-                    "max_new_tokens": {
-                        "help": "Number of generation steps to take, default 50",
-                        "required": False,
-                        "type": int
-                    },
-                    "top_k": {
-                        "help": "The number of top most probable tokens to consider in the sampling process.",
-                        "required": False,
-                        "type": int
-                    },
-                    "temperature": {
-                        "help": "A value controlling the randomness of the sampling process. Higher values result in more random samples.",
-                        "required": False,
-                        "type": int
-                    },
-                    "seed": {
-                        "help": "Random seed for reproducibility, default to 1234",
-                        "required": False,
-                        "type": int
-                    }
-                },
-                "function": self.__generate
-            }
-        }
-
-        self.model = None
-
-        # Initialise logging
-        logging.basicConfig(
-            filename="/home/litty-llm/logs/lit-server.log",
-            level=logging.INFO,
-            format="[SERVER] %(asctime)s - %(levelname)s - %(message)s"
-        )
-
-        logging.addLevelName(logging.INFO, "INFO")
-        logging.addLevelName(logging.WARNING, "WARN")
-        logging.addLevelName(logging.ERROR, "ERR")
-
-        logging.info("Starting up llama server")
-
+        self.debuglogging = False
+        self.commandList = {}
+        
     # Create a command from a message
     def parseMessage(self, message):
-        logging.info(f"Recieved message: {message.decode()}")
+        if self.debuglogging:
+            logging.info(f"Recieved message: {message.decode()}")
         return Command(message.decode())
 
     # Validate a command is correct against the command list
@@ -176,6 +77,161 @@ class SDModelServer():
     def hookCommand(self, cmd):
         return self.commandList[cmd.command]["function"](cmd)
 
+class Command():
+
+    def __init__(self, command):
+        self.command = None
+        self.arguments = {}
+        self.parse(command)
+
+    def parse(self, command):
+        # Split the message into the command and arguments
+        command_and_args = command.split(":")
+        self.command = command_and_args[0]
+
+        print(command_and_args)
+        if (len(command_and_args) > 1):
+            for pair in command_and_args[1:]:
+                print(pair)
+                arg, val = pair.split("=")
+                self.arguments[arg] = val
+
+class HeartBeatServer(MQServer):
+
+    def __init__(self):
+        MQServer.__init__(self)
+        self.commandList = {
+            "ping": {
+                "help": "pong",
+                "arguments": {},
+                "function": self.__pong
+            }
+        }
+
+    def __pong(self, cmd):
+        return "pong"
+
+    # Main loop
+    def main(self):
+        heartbeatSocket.setsockopt(zmq.RCVTIMEO, 10000)
+        response = ""
+
+        logging.info(f"Heartbeat listener started")
+
+        while self.running:
+            #  Wait for next request from client
+            try: 
+                message = heartbeatSocket.recv()
+            except zmq.error.Again:
+                print("Heartbeat timeout")
+                logging.info(f"heartbeat timeout detected, 10000ms without a response")
+                self.running = False
+                break
+
+            # We received a response
+            try:
+                cmd = self.parseMessage(message)
+                if (self.validateCommand(cmd)):
+                    response = self.hookCommand(cmd)
+                else:
+                    response = "Invalid command"
+            except Exception as e:
+                logging.error(traceback.format_exc())
+                response = f"Exception: {traceback.format_exc()}"
+
+            #  Send reply back to client
+            heartbeatSocket.send(response.encode())
+
+        heartbeatSocket.close()
+        
+
+class ModelServer(MQServer):
+
+    def __init__(self):
+        MQServer.__init__(self)
+        self.debuglogging = True
+        self.commandList = {
+            "quit": {
+                "help": "Shuts down Model Server",
+                "arguments": None,
+                "function": self.__quit
+            },
+            "help": {
+                "help": "Prints this message",
+                "arguments": None,
+                "function": self.__help
+            },
+            "loadModel": {
+                "help": "Loads a llama model into memory",
+                "arguments": {
+                    "model_path": {
+                        "help": "Filepath of the model",
+                        "required": True,
+                        "type": str
+                    },
+                    "context_size": {
+                        "help": "Maximum context size",
+                        "required": False,
+                        "type": int
+                    },
+                    "keep_in_ram": {
+                        "help": "Force the system to keep the model in RAM",
+                        "required": False,
+                        "type": bool
+                    },
+                    "lora_base": {
+                        "help": "Optional path to base model, useful if using a quantized base model and you want to apply LoRA to an f16 model",
+                        "required": False,
+                        "type": str
+                    },
+                    "lora_path": {
+                        "help": "Path to a LoRA file to apply to the model",
+                        "required": False,
+                        "type": str
+                    },
+                    "seed": {
+                        "help": "Random seed. 0 for random",
+                        "required": False,
+                        "type": int
+                    }
+                },
+                "function": self.__load_model
+            },
+            "generate": {
+                "help": "Generate a response",
+                "arguments": {
+                    "prompt": {
+                        "help": "Prompt",
+                        "required": True,
+                        "type": str
+                    },
+                    "max_tokens" : {
+                        "help": "The maximum number of tokens to generate, default 128",
+                        "required": False,
+                        "type": int
+                    },
+                    "temperature": {
+                        "help": "A value controlling the randomness of the sampling process. Higher values result in more random samples, default 0.8",
+                        "required": False,
+                        "type": float
+                    },
+                    "top_p": {
+                        "help": "The top-p value to use for sampling, deafult 0.95",
+                        "required": False,
+                        "type": float
+                    },
+                    "top_k": {
+                        "help": "The number of top most probable tokens to consider in the sampling process",
+                        "required": False,
+                        "type": float
+                    }
+                },
+                "function": self.__generate
+            }
+        }
+
+        self.model = None   
+
     # Function commands
     def __quit(self, cmd):
         self.running = False
@@ -210,10 +266,9 @@ class SDModelServer():
     # Main loop
     def main(self):
         response = ""
-
+        logging.info("LLM Server waiting for request...")
+        
         while self.running:
-            #  Wait for next request from client
-            logging.info("LLM Server waiting for request...")
 
             message = socket.recv()
             logging.info("LLM Server Received request: %s" % message)
@@ -235,8 +290,22 @@ class SDModelServer():
 
 
 def main():
-    sd_server = SDModelServer()
-    sd_server.main()
+    # Start sd model server on seperate thread running in background
+    sd_server = ModelServer()
+    print("Starting Model Server")
+    server_thread = threading.Thread(target =  sd_server.main)
+    server_thread.start()
+
+    print("Starting Heartbeat server")
+    # Kill main process when heartbeat stops
+    # This should only happen when the client is shut down and we don't receive a poll for over 5s
+    heartbeat_server = HeartBeatServer()
+    heartbeat_thread = threading.Thread(target = heartbeat_server.main)
+    heartbeat_thread.start()
+    heartbeat_thread.join()
+
+    sd_server.quit({})
+    server_thread.join()
 
 
 if __name__ == "__main__":

@@ -1,0 +1,38 @@
+version: '3.3'
+
+services:
+  stable-diffusion:
+    image: "litty-llm"
+    container_name: litty-llm
+    tty: true
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file: .env_docker
+    volumes:
+      - ../logs:/logs
+      - ../models:/models
+      - ../config:/config
+      - conda_env:/opt/conda
+      - root_profile:/root
+    ports:
+      - "5555:5555"
+      - "5556:5556"
+    networks:
+      vpcbr:
+        ipv4_address: 10.5.0.6
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [ gpu ]
+volumes:
+  conda_env:
+  root_profile:
+networks:
+  vpcbr:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.5.0.0/16
+          gateway: 10.5.0.1

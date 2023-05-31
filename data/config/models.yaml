@@ -1,0 +1,13 @@
+# For a given model hash we can define custom parameters
+# Keyed using model hash which is computed using sha1sum command on the docker image i.e. `sha1sum /models/<model_file> | awk '{print $1}'`
+
+# List of available functions:
+# 'tokenizer' - Tokenizer to use for this model
+# 'path'      - Path on docker to the model file
+# 'name'      - Name of model
+models:
+  # Default configuration, do not delete or modify!!
+  default:
+    config: ""
+    path: ""
+    name: "default"

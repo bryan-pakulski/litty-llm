@@ -1,3 +1,10 @@
-checkpoints/models
+.cache/
+.cppcheck/
+build/
+.vs
+.vscode
+venv/
+models/
+
 *.log
 *.pyc
