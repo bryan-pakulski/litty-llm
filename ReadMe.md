@@ -1,56 +1,60 @@
-This project is build off of the lit-llama project found here:
-https://github.com/Lightning-AI/lit-llama
+This project aims to encapsulate LLAMA into a docker container with a gui client / server message queue for interaction. It also includes functionality for crawling and indexing files for vector search.
 
-The main functionality improvment is encapsulating the LLAMA into a docker container with a client / server message queue for interaction.
+# Requirements:
+- Docker / Docker Compose
 
-## Checkpoint configuration:
+# Usage
 
-In order to use this model you will need the checkpoint files converted and stored in the `checkpoints` directory. The original conversion script is included from `lit-llama`, full
-details can be found on their repo: https://github.com/Lightning-AI/lit-llama
+- Run the `./start_docker.sh` script to initialise the llm server
+- Once docker is deployed the `entrypoint.sh` script should ensure that the `lit-server` is installed and ready to accept commands on localhost:5555 
 
-## Requirements:
-- Docker
-- Docker Compose
-- Python3 (and supporting libraries)
-    - zmq
+    (Note the server will auto shutdown if it doesn't receive heartbeat commands over port 5556, it expects a "ping" command at least every 10s to ensure that a client is connected. If no connection is present the server will stop and release memory, this is only a concern if you are rolling your own client to connect to the back end)
+- Launch the litty-llm gui to interact with the LLM server, the top docker status indicates whether a connection has been established.
 
-## Installation
-
-- Run the `./deploy_litty.sh` script in the main project directory
-- Once docker is deployed the `entrypoint.sh` script should ensure that the `lit-server` is running and ready to accept commands
-- The docker container should now have the server running and waiting for commands on localhost:5555
-- Use the example `lit-client.py` script to interact with the server to confirm that everything is working as intended i.e. `lit-client.py help`
-
-## Features currently supported:
+# Features:
 
 - Load LLM into memory to save on inference time
-- Support different compute devices i.e. cpu, gpu etc..
-- Support 8bit quanitzation for consumer VRAM hardware
 - Support ZMQ endpoint to interact with LLM server
 
-## Example commands:
+# Building
 
-### Loading Model to memory:
+There is a github pipeline available for both linux & windows that runs on the master branch.
+Release artifacts are saved for each tagged version and published.
 
-Note: that paths for the model default to the "checkpoint" directory that is linked to the docker container from the working directory, that is treated as the root path for the model files
+If you'd like to build locally you can do so using the cmake build system:
+
+## Linux:
+
+Install supporting libraries:
+
+- `libzmq` / `libzmq-dev` / `libzmq3-dev` (dependant on distribution)
+- `yaml-cpp`
+
+### Building:
+
+- Compiler: GCC
+
+- Run the following build scripts:
+  - `build.sh -r` compile gui and package docker container, `-r` flag is optional to enable release mode
+  - `deploy.sh` Deploy docker changes and synchronise with `compose-up`
+  - `run.sh` Run gui
+- Build is stored in `build/litty-llm-bin` (statically linked)
+
+## Windows:
+
+- Compiler: VSCC Visual Studio 17 2022
+
+The `build_release.bat` script assumes the you have vcpkg installed in the root `C:\` drive<br>
+Libraries can be installed using vcpkg in the same manner as they are set up in the pipeline:
 
 ```
-python lit-client.py loadModel:accelerator=auto:checkpoint_path=lit-llama/7B/state_dict.pth:model_size=7B:precision=full:quantize=True:tokenizer_path=lit-llama/tokenizer.model
+git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
+C:\vcpkg\bootstrap-vcpkg.bat
+C:\vcpkg\vcpkg install zeromq --triplet x64-windows
 ```
 
-### Querying loaded model:
-```
-python lit-client.py generate:prompt="What is the meaning of life?"
-```
+### Building
 
-### View help menu:
-```
-python lit-client.py help
-```
-
-## TODO
-
-- Add additional optimisation on the tensors to reduce storage space
-- Offload some storage onto the CPU
-- Look into CUDA device optimisation:\
-    ```You are using a CUDA device ('NVIDIA GeForce RTX 3060') that has Tensor Cores. To properly utilize them, you should set `torch.set_float32_matmul_precision('medium' | 'high')` which will trade-off precision for performance. For more details, read https://pytorch.org/docs/stable/generated/torch.set_float32_matmul_precision.html#torch.set_float32_matmul_precision```
+- `./scripts/build.bat -r` to build & package application, stored in `build/litty-llm-bin`, `-r` is optional to enable release mode
+- `./scripts/deploy.bat` to deploy / update existing docker container
+- `./scripts/run.bat` to start application
