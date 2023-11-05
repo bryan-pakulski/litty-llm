@@ -44,7 +44,7 @@ Install supporting libraries:
 
 - Compiler: VSCC Visual Studio 17 2022
 
-The `build_release.bat` script assumes the you have vcpkg installed in the root `C:\` drive<br>
+The `build.bat` script assumes the you have vcpkg installed in the root `C:\` drive<br>
 Libraries can be installed using vcpkg in the same manner as they are set up in the pipeline:
 
 ```

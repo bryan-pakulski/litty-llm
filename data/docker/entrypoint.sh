@@ -38,19 +38,3 @@ fi
 . /opt/conda/etc/profile.d/conda.sh
 conda activate $ENV_NAME
 conda info | grep active
-
-# Set up llama-cpp with GPU support if we have attached a device to this container
-gpu=$(nvidia-smi -L | grep -i '.* NVIDIA .*')
-echo "GPU:"
-echo $gpu
-
-shopt -s nocasematch
-
-if [[ $gpu == *' NVIDIA '* ]]; then
-  printf 'Nvidia GPU is present:  %s\n' "$gpu"
-  CMAKE_ARGS="-DLLAMA_CUBLAS=1" FORCE_CMAKE=1 pip install --upgrade --force-reinstall llama-cpp-python
-fi
-
-cd /lit-server
-
-python lit-server.py &

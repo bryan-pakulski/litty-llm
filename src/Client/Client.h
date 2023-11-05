@@ -31,8 +31,8 @@ private:
 
   std::mutex m_mutex;
 
-  std::string m_addr = "tcp://" + CONFIG::DOCKER_IP_ADDRESS.get() + ":5555";
-  std::string m_heartbeat_addr = "tcp://" + CONFIG::DOCKER_IP_ADDRESS.get() + ":5556";
+  std::string m_addr = "tcp://" + CONFIG::DOCKER_IP_ADDRESS.get() + ":5557";
+  std::string m_heartbeat_addr = "tcp://" + CONFIG::DOCKER_IP_ADDRESS.get() + ":5558";
   std::string s_failedResponse = "FAILED";
 
   std::string sendMessage(const std::string &message);
