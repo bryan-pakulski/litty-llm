@@ -2,8 +2,10 @@
 
 #include <string>
 
-struct model {
-  std::string name;
-  std::string hash;
-  std::string path;
+struct ModelConfig {
+  std::string name = "";
+  std::string model_path = "";
+  std::string hash = "";
+
+  bool use_cpu = false;
 };

@@ -2,6 +2,7 @@
 #pragma once
 #include <yaml-cpp/node/node.h>
 #include "Config/config.h"
+#include "Config/structs.h"
 #include <vector>
 #include <string>
 #include <sstream>
@@ -55,28 +56,15 @@ Call command to load stable diffusion model to memory
 
 Parameters:
     - model_path                    (Path to model file inside docker image)
-    - context_size                  (Maximum context size)
-    - keep_in_ram                   (Force the system to keep the model in RAM)
-    - lora_base                     (Optional path to base model)
-    - lora_path                     (Path to a LoRA file to apply to the model)
-    - seed                          (Random seed. 0 for random)
+    - use_cpu                       (Force the system to keep the model in system RAM over GPU)
 */
 class loadModelToMemory : public command {
 public:
-  loadModelToMemory(std::string &model_path, const int &context_size = 512, bool keep_in_ram = false,
-                    const std::string &lora_base = "", const std::string &lora_path = "", const int &seed = 0) {
+  loadModelToMemory(const ModelConfig &model) {
     m_name = "loadModel";
 
-    m_parameters.push_back(makePair("model_path", model_path));
-    m_parameters.push_back(makePair("context_size", context_size));
-    m_parameters.push_back(makePair("keep_in_ram", keep_in_ram));
-    if (lora_base != "") {
-      m_parameters.push_back(makePair("lora_base", lora_base));
-    }
-    if (lora_path != "") {
-      m_parameters.push_back(makePair("lora_path", lora_path));
-    }
-    m_parameters.push_back(makePair("seed", seed));
+    m_parameters.push_back(makePair("model_path", model.model_path));
+    m_parameters.push_back(makePair("use_cpu", model.use_cpu));
   }
 };
 

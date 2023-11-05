@@ -14,6 +14,7 @@ else()
         set(CMAKE_CXX_FLAGS "/Wall")
         set(CMAKE_CXX_FLAGS_DEBUG "/Z7")
         set(CMAKE_CXX_FLAGS_RELEASE "/O2")
+        include(C:/vcpkg/scripts/buildsystems/vcpkg.cmake)
 endif()
 
 #for clangd language server
@@ -94,10 +95,11 @@ if(NOT glfw_POPULATED)
     )
 endif()
 
-#download the Dear ImGUI project
+# download the Dear ImGUI project
 FetchContent_Declare(
         imgui
         GIT_REPOSITORY https://github.com/ocornut/imgui.git
+        GIT_TAG v1.89.7-docking
 )
 FetchContent_MakeAvailable(imgui)
 FetchContent_GetProperties(imgui)
@@ -143,8 +145,8 @@ endif()
 
 add_executable( litty-llm
                 src/main.cpp
+                src/LLMManager.cpp
                 src/Client/Client.cpp
-                src/Client/DockerCommandsInterface.cpp
                 src/Client/Heartbeat.cpp
                 src/Helpers/GLHelper.cpp
                 src/ThirdParty/sha1/sha1.cpp

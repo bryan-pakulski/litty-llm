@@ -1,5 +1,5 @@
+#include "LLMManager.h"
 #include "Client/Heartbeat.h"
-#include "Client/DockerCommandsInterface.h"
 #include "Display/ErrorHandler.h"
 #include "Display/QDisplay.h"
 #include <imgui_impl_glfw.h>
@@ -9,7 +9,7 @@ int main() {
 
   // Initialise heartbeat to docker
   Heartbeat::GetInstance().start();
-  DockerCommandsInterface::GetInstance().launchModelServer();
+  LLMManager::GetInstance().launchLLMModelServer();
 
   while (!glfwWindowShouldClose(QDisplay::GetInstance().getWindow())) {
 

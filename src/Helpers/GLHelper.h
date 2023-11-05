@@ -21,10 +21,9 @@ class Image {
 
 public:
   GLuint m_texture = 0;
-  int renderState = Q_EXECUTION_STATE::PENDING;
-  bool textured = Q_EXECUTION_STATE::PENDING;
   std::string m_name;
   std::string m_image_source;
+
   int m_width;
   int m_height;
 
@@ -45,7 +44,7 @@ public:
 
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_width, m_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 
-    QLogger::GetInstance().Log(LOGLEVEL::DEBUG, "Image::Image Successfully created blank texture", m_name);
+    QLogger::GetInstance().Log(LOGLEVEL::DBG2, "Image::Image Successfully created blank texture", m_name);
   }
   ~Image() = default;
 

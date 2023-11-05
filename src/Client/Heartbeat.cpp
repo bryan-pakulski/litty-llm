@@ -1,5 +1,6 @@
 #include "Heartbeat.h"
 #include "Display/ErrorHandler.h"
+#include "Client/Client.h"
 
 Heartbeat::Heartbeat() {}
 
@@ -17,13 +18,13 @@ void Heartbeat::run() {
   while (m_kill_timer.wait_for(std::chrono::seconds(c_timer))) {
 
     // Call sd-client to ping sd-server
-    QLogger::GetInstance().Log(LOGLEVEL::DEBUG, "DockerCommandsInterface::heartbeat ping");
+    QLogger::GetInstance().Log(LOGLEVEL::DBG1, "DockerCommandsInterface::heartbeat ping");
     Client::GetInstance().heartbeat(m_state);
 
     // Only throw an error when we experience a connection failure, on initial connect the last_state is POLL
     if (m_state == HEARTBEAT_STATE::DEAD && m_lastState == HEARTBEAT_STATE::ALIVE) {
-      ErrorHandler::GetInstance().setError("No heartbeat to Docker Server, is docker running?");
-      QLogger::GetInstance().Log(LOGLEVEL::ERR, "DockerCommandsInterface::heartbeat lost heartbeat with docker");
+      ErrorHandler::GetInstance().setError("Docker Heartbeat", "No heartbeat to SD Server, is docker running?");
+      QLogger::GetInstance().Log(LOGLEVEL::ERR, "lost heartbeat with docker");
     }
 
     // Only fire an error once on timeout to avoid spamming

@@ -11,6 +11,7 @@
 #include "Config/config.h"
 #include "Display/ErrorHandler.h"
 #include "Helpers/QLogger.h"
+#include "LLMManager.h"
 #include "Menus/TopBar/QDisplay_TopBar.h"
 #include "QDisplay_Base.h"
 
@@ -143,7 +144,7 @@ private:
 
     // Initialise callbacks for glfw *MUST BE DONE BEFORE IMGUI OTHERWISE IT
     // WILL OVERRIDE THE CALLBACKS THERE*
-    glfwSetErrorCallback(GLFWErrorCallBack);
+    glfwSetErrorCallback(LLMManager::GLFWErrorCallBack);
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();

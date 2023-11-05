@@ -1,5 +1,6 @@
 #pragma once
 
+#include "LLMManager.h"
 #include "Config/config.h"
 #include "Helpers/QLogger.h"
 #include "Helpers/GLHelper.h"
@@ -35,9 +36,6 @@ private:
   bool logUpdated = true;
   clock_t lastLogReadTime;
 
-  // New file config
-  char m_canvasName[256] = "new";
-
   /*
    * Popup for displaying log file output
    */
@@ -45,7 +43,6 @@ private:
 
     if (logFileOpen) {
       ImGui::SetNextWindowBgAlpha(0.9f);
-      ImGui::SetNextWindowSize(ImVec2(CONFIG::IMGUI_LOG_WINDOW_WIDTH.get(), CONFIG::IMGUI_LOG_WINDOW_HEIGHT.get()));
       ImGui::Begin("Log");
 
       if (ImGui::Button("Close")) {
@@ -65,7 +62,7 @@ private:
 
       // Only update text if required
       if (QLogger::GetInstance().m_LAST_WRITE_TIME != lastLogReadTime) {
-        logStream.open(QLOGGER_LOGFILE, std::ios::in);
+        logStream.open(CONFIG::LOG_FILE.get(), std::ios::in);
 
         logFileBuffer.clear();
         logFileBuffer.str(std::string());
@@ -76,6 +73,7 @@ private:
         logUpdated = true;
       }
 
+      // ImGui::TextWrapped("%s", logFileBuffer.str().c_str());
       ImGui::TextUnformatted(logFileBuffer.str().c_str());
 
       // Move to bottom of screen
@@ -135,11 +133,11 @@ public:
       if (ImGui::BeginMenu("Debug")) {
 
         if (ImGui::MenuItem("Release model from memory")) {
-          DockerCommandsInterface::GetInstance().releaseModelServer();
+          LLMManager::GetInstance().releaseLLMModel();
         }
 
         if (ImGui::MenuItem("Restart SD Server")) {
-          DockerCommandsInterface::GetInstance().launchModelServer();
+          LLMManager::GetInstance().launchLLMModelServer();
         }
 
         if (ImGui::MenuItem("Open Log")) {

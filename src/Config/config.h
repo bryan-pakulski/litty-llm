@@ -46,6 +46,8 @@ static CString MODELS_CONFIGURATION_FILE(loadConfig<std::string>("MODELS_CONFIGU
 
 // Logging
 static CInt ENABLE_GL_DEBUG(loadConfig<int>("ENABLE_OPENGL_DEBUG_OUTPUT", 0));
-static CInt ENABLE_DEBUG_LOGGING(loadConfig<int>("ENABLE_DEBUG_LOGGING", 0));
+static CInt ENABLE_TRACE_LOGGING(loadConfig<int>("ENABLE_TRACE_LOGGING", 0));
+static CInt DEBUG_LEVEL(loadConfig<int>("DEBUG_LEVEL", 5));
+static CString LOG_FILE(loadConfig<std::string>("LOG_FILE", "data/logs/llm-ui.log"));
 
 } // namespace CONFIG
