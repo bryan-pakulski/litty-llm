@@ -26,7 +26,7 @@ def main():
 
     # Kill main process when heartbeat stops
     # This should only happen when the client is shut down and we don't receive a poll for over 5s
-     logging.info("Starting Heartbeat server")
+    logging.info("Starting Heartbeat server")
     heartbeat_server = amq.HeartBeat.HeartBeatServer()
     heartbeat_thread = threading.Thread(target = heartbeat_server.main)
     heartbeat_thread.start()
